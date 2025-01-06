@@ -275,4 +275,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.gitignore.io/api/linux,macos,python,pycharm,windows,visualstudiocode
+# Additional entries
+.1024*
+!.1024
+.breakpoints
