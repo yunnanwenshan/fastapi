@@ -148,7 +148,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-eggs/
+egss/
 .eggs/
 lib/
 lib64/
@@ -276,6 +276,9 @@ $RECYCLE.BIN/
 *.lnk
 
 # Additional entries
+.1024*
+!.1024
+.breakpoints
 .1024*
 !.1024
 .breakpoints
