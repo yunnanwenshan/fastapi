@@ -56,4 +56,5 @@ http://127.0.0.1:8000/docs
 
 ```
 docker-compose exec db psql --username=fastapi --dbname=fastapi_dev
+docker-compose exec db psql --username=fastapi --dbname=fastapi_dev
 ```
