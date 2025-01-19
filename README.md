@@ -20,6 +20,17 @@ git clone https://github.com/marciovrl/fastapi-example.git
 pip install -r requirements.txt
 ```
 
+### Environment Configuration
+
+Create a `.env` file in the root of your project and include the following configurations:
+
+```
+DATABASE_URL=<your_database_url>
+REDIS_URL=<your_redis_url>
+```
+
+Make sure to replace `<your_database_url>` and `<your_redis_url>` with the actual URLs for your database and Redis service.
+
 ### Run server
 
 ```
@@ -52,7 +63,7 @@ docker-compose exec app pytest test/test.py
 http://127.0.0.1:8000/docs
 ```
 
-### Run server
+### Access PostgreSQL Server
 
 ```
 docker-compose exec db psql --username=fastapi --dbname=fastapi_dev
