@@ -275,7 +275,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# Additional entries
+### Additional entries
 .1024*
 !.1024
 .breakpoints
