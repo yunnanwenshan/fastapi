@@ -1,6 +1,10 @@
 import json
 
 
+def hello_world():
+    return 'Hello World'
+
+
 def read_user():
     with open('data/users.json') as stream:
         users = json.load(stream)

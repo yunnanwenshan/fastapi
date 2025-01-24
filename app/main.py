@@ -12,6 +12,11 @@ def root():
     return {"message": "Fast API in Python"}
 
 
+@app.get("/helloworld")
+def hello_world():
+    return api.hello_world()
+
+
 @app.get("/user")
 def read_user():
     return api.read_user()
