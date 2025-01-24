@@ -8,6 +8,7 @@ A simple example of using Fast API in Python.
 
 ## Clone the project
 
+
 ```
 git clone https://github.com/marciovrl/fastapi-example.git
 ```
