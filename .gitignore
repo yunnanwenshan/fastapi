@@ -1,9 +1,19 @@
 
-# Created by https://www.gitignore.io/api/linux,macos,python,pycharm,windows,visualstudiocode
-# Edit at https://www.gitignore.io/?templates=linux,macos,python,pycharm,windows,visualstudiocode
+# Python development environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
 
-### Linux ###
-*~
+# IDE and editor files
+.idea/
+.vscode/
+
+# Clacky configuration
+.1024*
+!.1024
+.breakpoints
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
@@ -275,14 +285,4 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-### Additional entries
-.1024*
-!.1024
-.breakpoints
-.1024*
-!.1024
-.breakpoints
-.1024*
-!.1024
-.breakpoints
-.breakpoints
+# End of additional entries
