@@ -285,4 +285,15 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of additional entries
+### Additional entries ###
+# Clacky specific files
+.1024*
+!.1024
+.breakpoints
+
+# Environment files
+.env
+
+# IDE settings
+.idea/
+.vscode/
