@@ -1,4 +1,10 @@
 # Command to run when "Run" button clicked
-run_command: source venv/bin/activate && uvicorn app.main:app --reload
+run_command: uvicorn app.main:app --reload
 # Command to install or update dependencies, will execute each time a new thread created to ensure dependencies up-to-date
 dependency_command: pip install -r requirements.txt
+# Programming language used in this project
+language: python
+# Framework used in this project
+framework: fastapi
+# Middleware dependencies required by the project
+middleware: postgres,redis
