@@ -4,7 +4,3 @@ run_command: uvicorn app.main:app --reload
 dependency_command: pip install -r requirements.txt
 # Programming language used in this project
 language: python
-# Framework used in this project
-framework: fastapi
-# Middleware dependencies required by the project
-middleware: postgres,redis
