@@ -22,6 +22,16 @@ def read_user():
     return api.read_user()
 
 
+@app.get("/user/{user_id}")
+def get_user(user_id: int):
+    user = api.get_user_by_id(user_id)
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    return user
+
+
 @app.get("/question/{position}", status_code=200)
 def read_questions(position: int, response: Response):
     question = api.read_questions(position)

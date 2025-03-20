@@ -12,6 +12,17 @@ def read_user():
     return users
 
 
+def get_user_by_id(user_id: int):
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+
+    for user in users:
+        if user['id'] == user_id:
+            return user
+    
+    return None
+
+
 def read_questions(position: int):
     with open('data/questions.json') as stream:
         questions = json.load(stream)
