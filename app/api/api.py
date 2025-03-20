@@ -1,4 +1,6 @@
 import json
+import os
+from app.db.models import User
 
 
 def hello_world():
@@ -81,3 +83,28 @@ def read_result(user_id: int):
                     user_result.append(car)
 
     return user_result
+
+
+def create_user(user: User):
+    # Read existing users
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+
+    # Find the maximum user ID
+    max_id = 0
+    for existing_user in users:
+        if existing_user['id'] > max_id:
+            max_id = existing_user['id']
+    
+    # Assign new ID
+    user_dict = user.dict()
+    user_dict['id'] = max_id + 1
+    
+    # Add the new user to the list
+    users.append(user_dict)
+    
+    # Save updated user list back to the file
+    with open('data/users.json', 'w') as stream:
+        json.dump(users, stream, indent=2)
+    
+    return user_dict

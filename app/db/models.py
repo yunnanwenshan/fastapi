@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class Answer(BaseModel):
@@ -10,3 +10,10 @@ class Answer(BaseModel):
 class UserAnswer(BaseModel):
     user_id: int
     answers: List[Answer]
+
+
+class User(BaseModel):
+    id: Optional[int] = None
+    name: str
+    mail: str
+    phone: str
