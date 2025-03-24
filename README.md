@@ -3,7 +3,6 @@
 A simple example of using Fast API in Python.
 
 ## Preconditions:
-
 - Python 3
 
 ## Clone the project
