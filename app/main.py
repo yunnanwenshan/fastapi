@@ -22,6 +22,15 @@ def read_user():
     return api.read_user()
 
 
+@app.get("/users/{user_id}")
+def read_user_by_id(user_id: int):
+    """
+    Get a user by their ID.
+    Returns user details if found, 404 error if not found.
+    """
+    return api.get_user_by_id(user_id)
+
+
 @app.get("/question/{position}", status_code=200)
 def read_questions(position: int, response: Response):
     question = api.read_questions(position)

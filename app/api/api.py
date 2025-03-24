@@ -1,4 +1,5 @@
 import json
+from fastapi import HTTPException
 
 
 def hello_world():
@@ -10,6 +11,17 @@ def read_user():
         users = json.load(stream)
 
     return users
+
+
+def get_user_by_id(user_id: int):
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+
+    for user in users:
+        if user['id'] == user_id:
+            return user
+
+    raise HTTPException(status_code=404, detail="User not found")
 
 
 def read_questions(position: int):
