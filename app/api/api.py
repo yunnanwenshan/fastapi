@@ -93,3 +93,56 @@ def read_result(user_id: int):
                     user_result.append(car)
 
     return user_result
+
+
+def get_user_details(user_id: int):
+    """
+    Get detailed information for a specific user along with their matched cars.
+    
+    Args:
+        user_id: The ID of the user to retrieve details for.
+        
+    Returns:
+        A dictionary containing user information and matched car details.
+        
+    Raises:
+        HTTPException: 404 error if user not found.
+    """
+    # Get user information
+    user_info = None
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+    
+    for user in users:
+        if user['id'] == user_id:
+            user_info = user
+            break
+    
+    if not user_info:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get user's car results
+    user_cars = []
+    with open('data/results.json') as stream:
+        results = json.load(stream)
+    
+    car_ids = []
+    for result in results:
+        if result['user_id'] == user_id:
+            car_ids = result['cars']
+            break
+    
+    # Get detailed car information
+    if car_ids:
+        with open('data/cars.json') as stream:
+            cars = json.load(stream)
+        
+        for car in cars:
+            if car['id'] in car_ids:
+                user_cars.append(car)
+    
+    # Combine user info and car details
+    return {
+        "user": user_info,
+        "matched_cars": user_cars
+    }

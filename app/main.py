@@ -31,6 +31,18 @@ def read_user_by_id(user_id: int):
     return api.get_user_by_id(user_id)
 
 
+@app.get("/users/{user_id}/details")
+def get_user_details(user_id: int):
+    """
+    Get detailed information for a specific user along with their matched cars.
+    
+    Returns:
+        A dictionary containing user information and detailed car information that match user preferences.
+        If the user is not found, returns a 404 error.
+    """
+    return api.get_user_details(user_id)
+
+
 @app.get("/question/{position}", status_code=200)
 def read_questions(position: int, response: Response):
     question = api.read_questions(position)
