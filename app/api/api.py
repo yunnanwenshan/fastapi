@@ -1,4 +1,5 @@
 import json
+import time
 from fastapi import HTTPException
 
 
@@ -14,14 +15,86 @@ def read_user():
 
 
 def get_user_by_id(user_id: int):
+    # Get basic user information
     with open('data/users.json') as stream:
         users = json.load(stream)
 
+    user_found = None
     for user in users:
         if user['id'] == user_id:
-            return user
+            user_found = user
+            break
 
-    raise HTTPException(status_code=404, detail="User not found")
+    if not user_found:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get user's answer history
+    user_answers = []
+    with open('data/answers.json') as stream:
+        answers = json.load(stream)
+    
+    for answer in answers:
+        if answer['user_id'] == user_id:
+            user_answers.append(answer)
+    
+    # Get user's recommended cars
+    recommended_car_ids = []
+    with open('data/results.json') as stream:
+        results = json.load(stream)
+    
+    for result in results:
+        if result['user_id'] == user_id:
+            recommended_car_ids = result['cars']
+            break
+    
+    # Get detailed information for recommended cars
+    recommended_cars = []
+    with open('data/cars.json') as stream:
+        cars = json.load(stream)
+    
+    for car in cars:
+        if car['id'] in recommended_car_ids:
+            recommended_cars.append(car)
+    
+    # Create enhanced user profile
+    enhanced_user = {
+        "user": user_found,
+        "answers": user_answers,
+        "recommended_cars": recommended_cars
+    }
+    
+    return enhanced_user
+
+
+def login_user(email: str, password: str):
+    # Read user data
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+    
+    user_found = None
+    for user in users:
+        if user['mail'] == email:
+            user_found = user
+            break
+    
+    # Check if user exists
+    if not user_found:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Simple password validation - using 'password' as default password for all accounts
+    if password != 'password':
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Generate a simple token
+    timestamp = int(time.time())
+    token = f"{user_found['id']}_{timestamp}"
+    
+    # Return user info with token
+    return {
+        "user": user_found,
+        "token": token,
+        "login_time": timestamp
+    }
 
 
 def read_questions(position: int):

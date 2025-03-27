@@ -10,3 +10,8 @@ class Answer(BaseModel):
 class UserAnswer(BaseModel):
     user_id: int
     answers: List[Answer]
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str

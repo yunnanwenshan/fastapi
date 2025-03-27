@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from starlette.responses import Response
 
-from app.db.models import UserAnswer
+from app.db.models import UserAnswer, UserLogin
 from app.api import api
 
 app = FastAPI()
@@ -56,3 +56,8 @@ def create_answer(payload: UserAnswer):
 @app.get("/result/{user_id}")
 def read_result(user_id: int):
     return api.read_result(user_id)
+
+
+@app.post("/login", status_code=200)
+def login_user(payload: UserLogin):
+    return api.login_user(email=payload.email, password=payload.password)
