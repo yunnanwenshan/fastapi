@@ -15,7 +15,6 @@ git clone https://github.com/marciovrl/fastapi-example.git
 ### Install dependencies
 
 ```
-
 pip install -r requirements.txt
 ```
 
