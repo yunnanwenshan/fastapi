@@ -146,3 +146,24 @@ def get_user_details(user_id: int):
         "user": user_info,
         "matched_cars": user_cars
     }
+
+
+def read_cars():
+    """
+    Get all available cars from the system.
+    
+    Returns:
+        A list of all cars with their details including id, name, fuel type,
+        price category, vehicle category, and link.
+        
+    Raises:
+        HTTPException: 404 error if cars file is not found or 500 error if there's a JSON parsing issue.
+    """
+    try:
+        with open('data/cars.json') as stream:
+            cars = json.load(stream)
+        return cars
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Cars data not found")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Error parsing cars data")

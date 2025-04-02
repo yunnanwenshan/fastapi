@@ -68,3 +68,14 @@ def create_answer(payload: UserAnswer):
 @app.get("/result/{user_id}")
 def read_result(user_id: int):
     return api.read_result(user_id)
+
+
+@app.get("/cars")
+def read_cars():
+    """
+    Get all available cars from the system.
+    
+    Returns:
+        A list of all cars with their details.
+    """
+    return api.read_cars()
