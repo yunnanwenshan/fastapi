@@ -141,10 +141,6 @@ def get_user_details(user_id: int):
             if car['id'] in car_ids:
                 user_cars.append(car)
     
-
-    Raises:
-        HTTPException: 404 error if cars file is not found or 500 error if there's a JSON parsing issue.
-    """
     try:
         with open('data/cars.json') as stream:
             cars = json.load(stream)
