@@ -273,3 +273,6 @@ def read_result_2(user_id: int):
 @app.get("/result/{user_id}")
 def read_result_3(user_id: int):
     return api.read_result(user_id)
+@app.get("/result/{user_id}")
+def read_result_3(user_id: int):
+    return api.read_result(user_id)
