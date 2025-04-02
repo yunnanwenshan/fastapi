@@ -141,11 +141,6 @@ def get_user_details(user_id: int):
             if car['id'] in car_ids:
                 user_cars.append(car)
     
-    # Combine user info and car details
-    return {
-        "user": user_info,
-        "matched_cars": user_cars
-    }
 
     Raises:
         HTTPException: 404 error if cars file is not found or 500 error if there's a JSON parsing issue.
