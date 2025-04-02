@@ -108,3 +108,62 @@ class MemberResponse(BaseModel):
     created_date: datetime
     corporate_data: Optional[CorporateMemberCreate] = None
     personal_data: Optional[PersonalMemberCreate] = None
+
+
+# Organization related models
+class OrganizationRole(str, Enum):
+    ADMIN = "admin"
+    MEMBER = "member"
+    GUEST = "guest"
+
+
+class Organization(BaseModel):
+    organization_id: int
+    name: str
+    description: Optional[str] = None
+    created_date: datetime
+    owner_user_id: int
+
+
+class OrganizationCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    owner_user_id: int
+
+
+class OrganizationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class OrganizationResponse(BaseModel):
+    organization_id: int
+    name: str
+    description: Optional[str] = None
+    created_date: datetime
+    owner_user_id: int
+    member_count: Optional[int] = None
+
+
+class OrganizationMembership(BaseModel):
+    membership_id: int
+    organization_id: int
+    user_id: int
+    role: OrganizationRole
+    joined_date: datetime
+
+
+class OrganizationMembershipCreate(BaseModel):
+    organization_id: int
+    user_id: int
+    role: OrganizationRole = OrganizationRole.MEMBER
+
+
+class OrganizationMembershipResponse(BaseModel):
+    membership_id: int
+    organization_id: int
+    user_id: int
+    role: OrganizationRole
+    joined_date: datetime
+    user_name: Optional[str] = None
+    organization_name: Optional[str] = None
