@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from starlette.responses import Response
 
-from app.db.models import UserAnswer
+from app.db.models import UserAnswer, UserLogin, UserRegister, MemberCreate
 from app.api import api
 
 app = FastAPI()
@@ -41,6 +41,72 @@ def get_user_details(user_id: int):
         If the user is not found, returns a 404 error.
     """
     return api.get_user_details(user_id)
+
+
+@app.post("/users/register")
+def register_user(user_data: UserRegister):
+    """
+    Register a new user.
+    
+    Returns:
+        User data excluding password. 400 error if email already exists.
+    """
+    return api.register_user(user_data)
+
+
+@app.post("/users/login")
+def login_user(login_data: UserLogin):
+    """
+    Authenticate a user with email and password.
+    
+    Returns:
+        User data on success. 401 error if credentials are invalid.
+    """
+    return api.login_user(login_data)
+
+
+@app.get("/users/{user_id}/detail")
+def get_user_detail(user_id: int):
+    """
+    Get detailed user information including associated member IDs.
+    
+    Returns:
+        Detailed user data including member IDs. 404 error if user not found.
+    """
+    return api.get_user_detail(user_id)
+
+
+@app.get("/users/{user_id}/members")
+def get_user_members(user_id: int):
+    """
+    Get all members associated with a specific user.
+    
+    Returns:
+        List of member objects. Empty list if no members. 404 error if user not found.
+    """
+    return api.get_user_members(user_id)
+
+
+@app.post("/members")
+def create_member(member_data: MemberCreate):
+    """
+    Create a new member (corporate or personal) associated with a user.
+    
+    Returns:
+        Member data on success. 400 error if data invalid, 404 error if user not found.
+    """
+    return api.create_member(member_data)
+
+
+@app.get("/members/{member_id}")
+def get_member(member_id: int):
+    """
+    Get information for a specific member.
+    
+    Returns:
+        Member data on success. 404 error if member not found.
+    """
+    return api.get_member(member_id)
 
 
 @app.get("/question/{position}", status_code=200)

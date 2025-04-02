@@ -3,12 +3,20 @@
     "id": 1,
     "name": "Márcio",
     "mail": "example@mail.com",
-    "phone": "98769878"
+    "phone": "98769878",
+    "password": "1a2b3c4d$5e6f7g8h9i10j11k12l13m14n15o16p17q18r19s20t",
+    "registered_date": "2023-01-15T10:30:45",
+    "last_login": null,
+    "member_ids": []
   },
   {
     "id": 2,
     "name": "Leandro",
     "mail": "example_leandro@mail.com",
-    "phone": "94435676"
+    "phone": "94435676",
+    "password": "a1b2c3d4$e5f6g7h8i9j10k11l12m13n14o15p16q17r18s19t20",
+    "registered_date": "2023-02-20T14:45:12",
+    "last_login": null,
+    "member_ids": []
   }
 ]
