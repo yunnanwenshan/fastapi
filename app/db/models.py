@@ -167,3 +167,49 @@ class OrganizationMembershipResponse(BaseModel):
     joined_date: datetime
     user_name: Optional[str] = None
     organization_name: Optional[str] = None
+
+
+# Report related models
+class ReportPeriod(str, Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+
+
+class UserReport(BaseModel):
+    report_id: int
+    period: ReportPeriod
+    start_date: datetime
+    end_date: datetime
+    user_id: Optional[int] = None
+    created_date: datetime
+    new_users_count: int
+    active_users_count: int
+    total_users_count: int
+    average_session_time: Optional[float] = None
+
+
+class UserReportCreate(BaseModel):
+    period: ReportPeriod
+    start_date: datetime
+    end_date: datetime
+    user_id: Optional[int] = None
+
+
+class UserReportResponse(BaseModel):
+    report_id: int
+    period: ReportPeriod
+    start_date: datetime
+    end_date: datetime
+    user_id: Optional[int] = None
+    created_date: datetime
+    new_users_count: int
+    active_users_count: int
+    total_users_count: int
+    average_session_time: Optional[float] = None
+
+
+class UserReportList(BaseModel):
+    total_count: int
+    reports: List[UserReportResponse]

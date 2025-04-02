@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from starlette.responses import Response
+from typing import Optional
 
-from app.db.models import UserAnswer, UserLogin, UserRegister, MemberCreate
+from app.db.models import UserAnswer, UserLogin, UserRegister, MemberCreate, UserReportCreate, ReportPeriod
 from app.api import api
 
 app = FastAPI()
@@ -107,6 +108,43 @@ def get_member(member_id: int):
         Member data on success. 404 error if member not found.
     """
     return api.get_member(member_id)
+
+
+@app.post("/reports")
+def generate_report(report_data: UserReportCreate):
+    """
+    Generate a new user report based on specified criteria.
+    
+    Returns:
+        Generated report data. 400 error if date range is invalid.
+    """
+    return api.generate_report(report_data)
+
+
+@app.get("/reports/{report_id}")
+def get_report(report_id: int):
+    """
+    Get a specific report by ID.
+    
+    Returns:
+        Report data on success. 404 error if report not found.
+    """
+    return api.get_report(report_id)
+
+
+@app.get("/reports")
+def list_reports(period: Optional[ReportPeriod] = None, user_id: Optional[int] = None):
+    """
+    Get a list of reports with optional filtering.
+    
+    Args:
+        period: Optional filter by report period type (daily, weekly, monthly, yearly)
+        user_id: Optional filter by specific user ID
+    
+    Returns:
+        List of filtered reports and total count.
+    """
+    return api.list_reports(period, user_id)
 
 
 @app.get("/question/{position}", status_code=200)

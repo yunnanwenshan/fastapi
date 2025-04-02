@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from app.db.models import (
     User, UserLogin, UserRegister, UserResponse, UserDetailResponse,
     Member, MemberType, CorporateMember, PersonalMember, 
-    MemberCreate, MemberResponse
+    MemberCreate, MemberResponse, UserReportCreate, UserReportResponse, UserReportList
 )
 
 
@@ -556,3 +556,129 @@ def get_user_members(user_id: int) -> List[MemberResponse]:
             members_list.append(member_response)
     
     return members_list
+
+def get_next_report_id() -> int:
+    """Gets the next available report ID"""
+    with open('data/reports.json') as stream:
+        reports = json.load(stream)
+    
+    if not reports:
+        return 1
+    return max(report['report_id'] for report in reports) + 1
+
+def calculate_user_stats(start: datetime, end: datetime) -> dict:
+    """Calculates user statistics for report generation"""
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+    
+    new_users = [u for u in users 
+                 if datetime.fromisoformat(u['registered_date']) >= start
+                 and datetime.fromisoformat(u['registered_date']) <= end]
+    
+    active_users = [u for u in users 
+                    if u.get('last_login') 
+                    and datetime.fromisoformat(u['last_login']) >= start
+                    and datetime.fromisoformat(u['last_login']) <= end]
+    
+    total_users = [u for u in users 
+                   if datetime.fromisoformat(u['registered_date']) <= end]
+    
+    return {
+        'new': len(new_users),
+        'active': len(active_users),
+        'total': len(total_users)
+    }
+
+def generate_report(report_data: UserReportCreate) -> UserReportResponse:
+    # Validate date range
+    if report_data.start_date >= report_data.end_date:
+        raise HTTPException(status_code=400, detail="End date must be after start date")
+    
+    # Calculate statistics
+    stats = calculate_user_stats(report_data.start_date, report_data.end_date)
+    
+    # Create new report
+    new_report = {
+        "report_id": get_next_report_id(),
+        "period": report_data.period,
+        "start_date": report_data.start_date.isoformat(),
+        "end_date": report_data.end_date.isoformat(),
+        "user_id": report_data.user_id,
+        "created_date": datetime.now().isoformat(),
+        "new_users_count": stats['new'],
+        "active_users_count": stats['active'],
+        "total_users_count": stats['total'],
+        "average_session_time": None
+    }
+    
+    # Save to file
+    with open('data/reports.json') as stream:
+        reports = json.load(stream)
+    
+    reports.append(new_report)
+    
+    with open('data/reports.json', 'w') as stream:
+        json.dump(reports, stream, indent=2)
+    
+    return UserReportResponse(
+        report_id=new_report['report_id'],
+        period=report_data.period,
+        start_date=report_data.start_date,
+        end_date=report_data.end_date,
+        user_id=report_data.user_id,
+        created_date=datetime.fromisoformat(new_report['created_date']),
+        new_users_count=stats['new'],
+        active_users_count=stats['active'],
+        total_users_count=stats['total']
+    )
+
+def get_report(report_id: int) -> UserReportResponse:
+    with open('data/reports.json') as stream:
+        reports = json.load(stream)
+    
+    for report in reports:
+        if report['report_id'] == report_id:
+            return UserReportResponse(
+                report_id=report['report_id'],
+                period=report['period'],
+                start_date=datetime.fromisoformat(report['start_date']),
+                end_date=datetime.fromisoformat(report['end_date']),
+                user_id=report.get('user_id'),
+                created_date=datetime.fromisoformat(report['created_date']),
+                new_users_count=report['new_users_count'],
+                active_users_count=report['active_users_count'],
+                total_users_count=report['total_users_count'],
+                average_session_time=report.get('average_session_time')
+            )
+    
+    raise HTTPException(status_code=404, detail="Report not found")
+
+def list_reports(period: Optional[str] = None, user_id: Optional[int] = None) -> UserReportList:
+    with open('data/reports.json') as stream:
+        reports = json.load(stream)
+    
+    filtered = []
+    for report in reports:
+        if period and report['period'] != period:
+            continue
+        if user_id and report.get('user_id') != user_id:
+            continue
+        filtered.append(report)
+    
+    return UserReportList(
+        total_count=len(filtered),
+        reports=[
+            UserReportResponse(
+                report_id=r['report_id'],
+                period=r['period'],
+                start_date=datetime.fromisoformat(r['start_date']),
+                end_date=datetime.fromisoformat(r['end_date']),
+                user_id=r.get('user_id'),
+                created_date=datetime.fromisoformat(r['created_date']),
+                new_users_count=r['new_users_count'],
+                active_users_count=r['active_users_count'],
+                total_users_count=r['total_users_count'],
+                average_session_time=r.get('average_session_time')
+            ) for r in filtered
+        ]
+    )
