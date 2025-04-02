@@ -59,6 +59,7 @@ docker-compose exec app pytest test/test.py
 
 ## API documentation (provided by Swagger UI)
 
+
 ```
 http://127.0.0.1:8000/docs
 ```
