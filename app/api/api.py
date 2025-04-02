@@ -12,7 +12,13 @@ from app.db.models import (
     User, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel,
     UpdateMembershipModel, MembershipResponse, UserLog, CreateLogModel, UserLogResponse, LogOperationType,
     UserRegistration, EmailVerification, MembershipStatistics, LevelDistribution, MembershipTrend,
-    PointsDistribution, MembershipTimeFrame, MembershipStatsResponse
+    PointsDistribution, MembershipTimeFrame, MembershipStatsResponse,
+    Project, CreateProjectModel, UpdateProjectModel, ProjectResponse,
+    Task, CreateTaskModel, UpdateTaskModel, TaskResponse,
+    ProjectMember, CreateProjectMemberModel, UpdateProjectMemberModel, ProjectMemberResponse,
+    Comment, CreateCommentModel, UpdateCommentModel, CommentResponse,
+    Attachment, CreateAttachmentModel, UpdateAttachmentModel, AttachmentResponse,
+    ProjectStatistics, ProjectStatus, TaskStatus, TaskPriority, ProjectRole
 )
 
 import random
@@ -879,7 +885,7 @@ def calculate_membership_trends(memberships: List[Membership]) -> List[Membershi
 
     sorted_months = sorted(trends.keys())
     running_total = 0
-    trends_list = []
+        trends_list = []
     
     for month in sorted_months:
         running_total += trends[month]['new'] - trends[month]['churned']
@@ -931,3 +937,345 @@ def get_member_retention_rate(start_date: datetime, end_date: datetime) -> float
     retained = sum(1 for m in cohort if m.valid_until > end_date and m.is_active)
     
     return round(retained/len(cohort)*100, 2) if cohort else 0
+
+# Project-related functions
+def create_project(project_data: CreateProjectModel) -> ProjectResponse:
+    """Create a new project"""
+    # Validate creator exists
+    with open('data/users.json') as f:
+        users = json.load(f)
+        if not any(str(u['id']) == project_data.created_by for u in users):
+            raise HTTPException(status_code=400, detail="Creator user not found")
+
+    project_id = str(uuid.uuid4())
+    now = datetime.now()
+    new_project = {
+        "id": project_id,
+        **project_data.dict(),
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+    projects.append(new_project)
+    
+    with open('data/projects.json', 'w') as f:
+        json.dump(projects, f, indent=2)
+    
+    _log_user_action(
+        user_id=project_data.created_by,
+        operation_type="create",
+        description=f"Created project {project_data.name}",
+        metadata={"project_id": project_id}
+    )
+    return ProjectResponse(**new_project)
+
+def update_project(project_id: str, project_data: UpdateProjectModel) -> ProjectResponse:
+    """Update an existing project"""
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+    
+    updated = False
+    for i, p in enumerate(projects):
+        if p['id'] == project_id:
+            update_data = project_data.dict(exclude_unset=True)
+            projects[i].update(update_data)
+            projects[i]['updated_at'] = datetime.now().isoformat()
+            updated = True
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    with open('data/projects.json', 'w') as f:
+        json.dump(projects, f, indent=2)
+    
+    return ProjectResponse(**projects[i])
+
+def delete_project(project_id: str) -> Dict[str, str]:
+    """Delete a project and related data"""
+    # Delete project
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+    
+    original_count = len(projects)
+    projects = [p for p in projects if p['id'] != project_id]
+    
+    if len(projects) == original_count:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    with open('data/projects.json', 'w') as f:
+        json.dump(projects, f, indent=2)
+    
+    # Delete related tasks
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    tasks = [t for t in tasks if t['project_id'] != project_id]
+    with open('data/tasks.json', 'w') as f:
+        json.dump(tasks, f, indent=2)
+    
+    return {"message": "Project deleted successfully"}
+
+def get_project(project_id: str) -> Dict[str, Any]:
+    """Get a single project by ID"""
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+    
+    for p in projects:
+        if p['id'] == project_id:
+            return {
+                **p,
+                "created_at": datetime.fromisoformat(p['created_at']),
+                "updated_at": datetime.fromisoformat(p['updated_at'])
+            }
+    
+    raise HTTPException(status_code=404, detail="Project not found")
+
+def get_all_projects(
+    skip: int = 0, 
+    limit: int = 100,
+    status: Optional[str] = None,
+    created_by: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Get all projects with filtering"""
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+    
+    filtered = projects
+    if status:
+        filtered = [p for p in filtered if p['status'] == status]
+    if created_by:
+        filtered = [p for p in filtered if p['created_by'] == created_by]
+    
+    return filtered[skip:skip+limit]
+
+# Task-related functions
+def create_task(task_data: CreateTaskModel) -> TaskResponse:
+    """Create a new task"""
+    # Validate project exists
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+        if not any(p['id'] == task_data.project_id for p in projects):
+            raise HTTPException(status_code=400, detail="Project not found")
+
+    task_id = str(uuid.uuid4())
+    now = datetime.now()
+    new_task = {
+        "id": task_id,
+        **task_data.dict(),
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    tasks.append(new_task)
+    
+    with open('data/tasks.json', 'w') as f:
+        json.dump(tasks, f, indent=2)
+    
+    return TaskResponse(**new_task)
+
+def update_task(task_id: str, task_data: UpdateTaskModel) -> TaskResponse:
+    """Update an existing task"""
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    
+    updated = False
+    for i, t in enumerate(tasks):
+        if t['id'] == task_id:
+            update_data = task_data.dict(exclude_unset=True)
+            tasks[i].update(update_data)
+            tasks[i]['updated_at'] = datetime.now().isoformat()
+            updated = True
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    with open('data/tasks.json', 'w') as f:
+        json.dump(tasks, f, indent=2)
+    
+    return TaskResponse(**tasks[i])
+
+def delete_task(task_id: str) -> Dict[str, str]:
+    """Delete a task"""
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    
+    original_count = len(tasks)
+    tasks = [t for t in tasks if t['id'] != task_id]
+    
+    if len(tasks) == original_count:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    with open('data/tasks.json', 'w') as f:
+        json.dump(tasks, f, indent=2)
+    
+    return {"message": "Task deleted successfully"}
+
+def get_task(task_id: str) -> Dict[str, Any]:
+    """Get a single task by ID"""
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    
+    for t in tasks:
+        if t['id'] == task_id:
+            return {
+                **t,
+                "created_at": datetime.fromisoformat(t['created_at']),
+                "updated_at": datetime.fromisoformat(t['updated_at'])
+            }
+    
+    raise HTTPException(status_code=404, detail="Task not found")
+
+def get_project_tasks(
+    project_id: str,
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    assigned_to: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Get tasks for a project with filters"""
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    
+    filtered = [t for t in tasks if t['project_id'] == project_id]
+    if status:
+        filtered = [t for t in filtered if t['status'] == status]
+    if priority:
+        filtered = [t for t in filtered if t['priority'] == priority]
+    if assigned_to:
+        filtered = [t for t in filtered if t['assigned_to'] == assigned_to]
+    
+    return filtered[skip:skip+limit]
+
+# Project member functions
+def add_project_member(member_data: CreateProjectMemberModel) -> ProjectMemberResponse:
+    """Add member to a project"""
+    # Validate user exists
+    with open('data/users.json') as f:
+        users = json.load(f)
+        if not any(u['id'] == member_data.user_id for u in users):
+            raise HTTPException(status_code=400, detail="User not found")
+    
+    # Validate project exists
+    with open('data/projects.json') as f:
+        projects = json.load(f)
+        if not any(p['id'] == member_data.project_id for p in projects):
+            raise HTTPException(status_code=400, detail="Project not found")
+
+    member_id = str(uuid.uuid4())
+    now = datetime.now()
+    new_member = {
+        "id": member_id,
+        **member_data.dict(),
+        "joined_at": now.isoformat()
+    }
+
+    with open('data/project_members.json') as f:
+        members = json.load(f)
+    members.append(new_member)
+    
+    with open('data/project_members.json', 'w') as f:
+        json.dump(members, f, indent=2)
+    
+    return ProjectMemberResponse(**new_member)
+
+def update_member_role(member_id: str, role: str) -> ProjectMemberResponse:
+    """Update project member role"""
+    with open('data/project_members.json') as f:
+        members = json.load(f)
+    
+    updated = False
+    for i, m in enumerate(members):
+        if m['id'] == member_id:
+            members[i]['role'] = role
+            updated = True
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    with open('data/project_members.json', 'w') as f:
+        json.dump(members, f, indent=2)
+    
+    return ProjectMemberResponse(**members[i])
+
+def get_project_members(project_id: str) -> List[Dict[str, Any]]:
+    """Get all members of a project"""
+    with open('data/project_members.json') as f:
+        members = json.load(f)
+    
+    return [m for m in members if m['project_id'] == project_id]
+
+# Comment functions
+def create_comment(comment_data: CreateCommentModel) -> CommentResponse:
+    """Create a new comment"""
+    comment_id = str(uuid.uuid4())
+    now = datetime.now()
+    new_comment = {
+        "id": comment_id,
+        **comment_data.dict(),
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+
+    with open('data/project_comments.json') as f:
+        comments = json.load(f)
+    comments.append(new_comment)
+    
+    with open('data/project_comments.json', 'w') as f:
+        json.dump(comments, f, indent=2)
+    
+    return CommentResponse(**new_comment)
+
+# Attachment functions
+def create_attachment(attachment_data: CreateAttachmentModel) -> AttachmentResponse:
+    """Create a new attachment record"""
+    attachment_id = str(uuid.uuid4())
+    now = datetime.now()
+    new_attachment = {
+        "id": attachment_id,
+        **attachment_data.dict(),
+        "uploaded_at": now.isoformat()
+    }
+
+    with open('data/project_attachments.json') as f:
+        attachments = json.load(f)
+    attachments.append(new_attachment)
+    
+    with open('data/project_attachments.json', 'w') as f:
+        json.dump(attachments, f, indent=2)
+    
+    return AttachmentResponse(**new_attachment)
+
+# Project analysis functions
+def calculate_project_progress(project_id: str) -> float:
+    """Calculate project progress based on task statuses"""
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    
+    project_tasks = [t for t in tasks if t['project_id'] == project_id]
+    if not project_tasks:
+        return 0.0
+    
+    completed = sum(1 for t in project_tasks if t['status'] == 'done')
+    return round(completed / len(project_tasks) * 100, 2)
+
+def analyze_project_risks(project_id: str) -> Dict[str, Any]:
+    """Analyze project risks"""
+    with open('data/tasks.json') as f:
+        tasks = json.load(f)
+    
+    project_tasks = [t for t in tasks if t['project_id'] == project_id]
+    now = datetime.now()
+    
+    return {
+        "overdue_tasks": sum(1 for t in project_tasks 
+                            if t['due_date'] and datetime.fromisoformat(t['due_date']) < now),
+        "unassigned_tasks": sum(1 for t in project_tasks if not t['assigned_to']),
+        "total_tasks": len(project_tasks)
+    }

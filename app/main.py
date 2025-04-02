@@ -3,7 +3,7 @@ from starlette.responses import Response
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType, UserRegistration, RegistrationResponse, MembershipStatistics, LevelDistribution, MembershipTrend, PointsDistribution, MembershipTimeFrame, MembershipStatsResponse
+from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType, UserRegistration, RegistrationResponse, MembershipStatistics, LevelDistribution, MembershipTrend, PointsDistribution, MembershipTimeFrame, MembershipStatsResponse, ProjectResponse, CreateProjectModel, UpdateProjectModel, TaskResponse, CreateTaskModel, UpdateTaskModel, ProjectMemberResponse, CreateProjectMemberModel, UpdateProjectMemberModel, CommentResponse, CreateCommentModel, UpdateCommentModel, AttachmentResponse, CreateAttachmentModel, ProjectStatistics
 from app.api import api
 
 app = FastAPI()
@@ -398,3 +398,153 @@ def create_answer(payload: UserAnswer):
 @app.get("/result/{user_id}")
 def read_result(user_id: int):
     return api.read_result(user_id)
+
+# Project endpoints
+@app.post("/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+def create_project(project_data: CreateProjectModel):
+    try:
+        return api.create_project(project_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Project creation failed: {str(e)}")
+
+@app.get("/projects", response_model=List[Dict[str, Any]])
+def read_projects(
+    skip: int = Query(0, description="Number of records to skip"),
+    limit: int = Query(100, description="Maximum records to return"),
+    status: Optional[str] = Query(None, description="Filter by project status"),
+    created_by: Optional[str] = Query(None, description="Filter by creator ID")
+):
+    return api.get_all_projects(skip=skip, limit=limit, status=status, created_by=created_by)
+
+@app.get("/projects/{project_id}", response_model=Dict[str, Any])
+def read_project(project_id: str):
+    return api.get_project(project_id)
+
+@app.put("/projects/{project_id}", response_model=ProjectResponse)
+def update_project(project_data: UpdateProjectModel, project_id: str):
+    try:
+        return api.update_project(project_id, project_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Project update failed: {str(e)}")
+
+@app.delete("/projects/{project_id}", status_code=status.HTTP_200_OK)
+def delete_project(project_id: str):
+    try:
+        return api.delete_project(project_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Project deletion failed: {str(e)}")
+
+@app.get("/projects/{project_id}/statistics", response_model=ProjectStatistics)
+def get_project_stats(project_id: str):
+    return api.calculate_project_statistics(project_id)
+
+@app.get("/projects/{project_id}/progress", response_model=float)
+def get_project_progress(project_id: str):
+    return api.calculate_project_progress(project_id)
+
+@app.get("/projects/{project_id}/risks", response_model=Dict[str, Any])
+def get_project_risks(project_id: str):
+    return api.analyze_project_risks(project_id)
+
+# Task endpoints
+@app.post("/projects/{project_id}/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+def create_task(project_id: str, task_data: CreateTaskModel):
+    try:
+        return api.create_task(task_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Task creation failed: {str(e)}")
+
+@app.get("/projects/{project_id}/tasks", response_model=List[Dict[str, Any]])
+def read_project_tasks(
+    project_id: str,
+    skip: int = Query(0),
+    limit: int = Query(100),
+    status: Optional[str] = Query(None),
+    priority: Optional[str] = Query(None),
+    assigned_to: Optional[str] = Query(None)
+):
+    return api.get_project_tasks(project_id, skip, limit, status, priority, assigned_to)
+
+@app.get("/tasks/{task_id}", response_model=Dict[str, Any])
+def read_task(task_id: str):
+    return api.get_task(task_id)
+
+@app.put("/tasks/{task_id}", response_model=TaskResponse)
+def update_task(task_data: UpdateTaskModel, task_id: str):
+    try:
+        return api.update_task(task_id, task_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Task update failed: {str(e)}")
+
+@app.post("/tasks/{task_id}/assign", response_model=TaskResponse)
+def assign_task(task_id: str, user_id: str = Body(..., embed=True)):
+    return api.assign_task(task_id, user_id)
+
+# Project member endpoints
+@app.post("/projects/{project_id}/members", response_model=ProjectMemberResponse, status_code=status.HTTP_201_CREATED)
+def add_member(project_id: str, member_data: CreateProjectMemberModel):
+    try:
+        return api.add_project_member(member_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add member: {str(e)}")
+
+@app.get("/projects/{project_id}/members", response_model=List[ProjectMemberResponse])
+def read_project_members(project_id: str):
+    return api.get_project_members(project_id)
+
+@app.delete("/projects/members/{member_id}", status_code=status.HTTP_200_OK)
+def remove_member(member_id: str):
+    try:
+        return api.remove_project_member(member_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Member removal failed: {str(e)}")
+
+# Comment endpoints
+@app.post("/projects/{project_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+def create_project_comment(project_id: str, comment_data: CreateCommentModel):
+    return api.create_comment(comment_data)
+
+@app.post("/tasks/{task_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+def create_task_comment(task_id: str, comment_data: CreateCommentModel):
+    return api.create_comment(comment_data)
+
+# Attachment endpoints
+@app.post("/projects/{project_id}/attachments", response_model=AttachmentResponse, status_code=status.HTTP_201_CREATED)
+def upload_project_attachment(project_id: str, attachment_data: CreateAttachmentModel):
+    try:
+        return api.create_attachment(attachment_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Attachment upload failed: {str(e)}")
+
+@app.get("/users/{user_id}/projects", response_model=List[Dict[str, Any]])
+def read_user_projects(user_id: str):
+    return api.get_user_projects(user_id)
+
+@app.get("/tasks/{task_id}/dependencies", response_model=List[Dict[str, Any]])
+def get_dependencies(task_id: str):
+    return api.get_task_dependencies(task_id)
+
+@app.delete("/attachments/{attachment_id}", status_code=status.HTTP_200_OK)
+def delete_attachment(attachment_id: str):
+    try:
+        return api.delete_attachment(attachment_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Attachment deletion failed: {str(e)}")
