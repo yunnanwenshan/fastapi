@@ -295,7 +295,6 @@ def test_create_answer():
     response = client.post('/answer', data=body)
     assert response.status_code == 201
 
-
 def test_read_result():
     response = client.get('/result/1')
     assert response.status_code == 200
