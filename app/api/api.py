@@ -7,7 +7,10 @@ from typing import List, Optional, Dict, Any
 from passlib.hash import bcrypt
 from fastapi import HTTPException
 
-from app.db.models import User, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse
+from app.db.models import (
+    User, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel,
+    UpdateMembershipModel, MembershipResponse, UserLog, CreateLogModel, UserLogResponse, LogOperationType
+)
 
 
 def hash_password(password: str) -> str:
@@ -76,6 +79,13 @@ def create_user(user_data: CreateUserModel) -> UserResponse:
     with open('data/users.json', 'w') as stream:
         json.dump(users, stream, indent=2)
     
+    _log_user_action(
+        user_id=new_user["id"],
+        operation_type="create",
+        description="User account created",
+        metadata={"source": "api"}
+    )
+    
     # Return user data without password hash
     return UserResponse(
         id=new_user["id"],
@@ -142,6 +152,13 @@ def update_user(user_id: str, user_data: UpdateUserModel) -> UserResponse:
     with open('data/users.json', 'w') as stream:
         json.dump(users, stream, indent=2)
     
+    _log_user_action(
+        user_id=user_id,
+        operation_type="update",
+        description="User profile updated",
+        metadata={"fields_updated": list(user_data.dict(exclude_unset=True).keys())}
+    )
+    
     # Return updated user data
     return UserResponse(
         id=updated_user["id"],
@@ -180,6 +197,12 @@ def delete_user(user_id: str) -> Dict[str, str]:
     # Save updated users list
     with open('data/users.json', 'w') as stream:
         json.dump(users, stream, indent=2)
+    
+    _log_user_action(
+        user_id=user_id,
+        operation_type="delete",
+        description="User account deleted"
+    )
     
     return {"message": "User deleted successfully"}
 
@@ -568,3 +591,77 @@ def add_membership_points(membership_id: str, points: int) -> MembershipResponse
         json.dump(memberships, stream, indent=2)
     
     return MembershipResponse(**memberships[i])
+
+# Log-related functions
+def create_log(log_data: CreateLogModel) -> UserLogResponse:
+    """Create a new user activity log entry"""
+    log_id = str(uuid.uuid4())
+    now = datetime.now()
+    
+    new_log = {
+        "id": log_id,
+        "user_id": log_data.user_id,
+        "operation_type": log_data.operation_type.value,
+        "description": log_data.description,
+        "created_at": now.isoformat(),
+        "ip_address": log_data.ip_address,
+        "metadata": log_data.metadata
+    }
+
+    with open('data/user_logs.json') as stream:
+        logs = json.load(stream)
+    logs.append(new_log)
+    
+    with open('data/user_logs.json', 'w') as stream:
+        json.dump(logs, stream, indent=2)
+
+    return UserLogResponse(**new_log)
+
+def get_logs(
+    skip: int = 0,
+    limit: int = 100,
+    user_id: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> List[Dict[str, Any]]:
+    """Retrieve filtered logs with pagination"""
+    with open('data/user_logs.json') as stream:
+        logs = json.load(stream)
+
+    filtered = logs
+    if user_id:
+        filtered = [log for log in filtered if log['user_id'] == user_id]
+    if operation_type:
+        filtered = [log for log in filtered if log['operation_type'].lower() == operation_type.lower()]
+    if start_date:
+        filtered = [log for log in filtered if datetime.fromisoformat(log['created_at']) >= start_date]
+    if end_date:
+        filtered = [log for log in filtered if datetime.fromisoformat(log['created_at']) <= end_date]
+
+    paginated = filtered[skip:skip+limit]
+    return [{
+        **log,
+        "created_at": datetime.fromisoformat(log["created_at"])
+    } for log in paginated]
+
+def get_user_logs(user_id: str, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    """Get logs for a specific user"""
+    return get_logs(user_id=user_id, skip=skip, limit=limit)
+
+def _log_user_action(
+    user_id: str,
+    operation_type: str,
+    description: str,
+    metadata: Optional[dict] = None
+):
+    """Helper to log user actions silently"""
+    try:
+        create_log(CreateLogModel(
+            user_id=user_id,
+            operation_type=LogOperationType(operation_type),
+            description=description,
+            metadata=metadata
+        ))
+    except Exception as e:
+        pass

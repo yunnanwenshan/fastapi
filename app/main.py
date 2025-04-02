@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status, Query, Path, Depends, Body
 from starlette.responses import Response
 from typing import List, Optional, Dict, Any
 
-from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse
+from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType
 from app.api import api
 
 app = FastAPI()
@@ -175,6 +175,57 @@ def add_membership_points(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add points: {str(e)}")
+
+# Log endpoints
+@app.get("/logs", response_model=List[Dict[str, Any]])
+def read_logs(
+    skip: int = Query(0, description="Number of records to skip"),
+    limit: int = Query(100, description="Maximum records to return"),
+    user_id: Optional[str] = Query(None, description="Filter by user ID"),
+    operation_type: Optional[str] = Query(None, description="Filter by operation type"),
+    start_date: Optional[str] = Query(None, description="Start date for filtering logs"),
+    end_date: Optional[str] = Query(None, description="End date for filtering logs")
+):
+    """
+    Retrieve system logs with filtering and pagination
+    """
+    try:
+        return api.get_logs(
+            skip=skip,
+            limit=limit,
+            user_id=user_id,
+            operation_type=operation_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving logs: {str(e)}")
+
+@app.get("/users/{user_id}/logs", response_model=List[Dict[str, Any]])
+def read_user_logs(
+    user_id: str = Path(..., description="User ID to retrieve logs for"),
+    skip: int = Query(0, description="Number of records to skip"),
+    limit: int = Query(100, description="Maximum records to return")
+):
+    """
+    Get activity logs for a specific user
+    """
+    try:
+        return api.get_user_logs(user_id, skip=skip, limit=limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving user logs: {str(e)}")
+
+@app.post("/logs", response_model=UserLogResponse, status_code=status.HTTP_201_CREATED)
+def create_log_entry(log_data: CreateLogModel):
+    """
+    Create a new system log entry manually
+    """
+    try:
+        return api.create_log(log_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create log entry: {str(e)}")
 
 @app.get("/users/{user_id}/details")
 def get_user_details(user_id: int):

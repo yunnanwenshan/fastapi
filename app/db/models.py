@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 
 
 class Answer(BaseModel):
@@ -86,3 +87,47 @@ class MembershipResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class LogOperationType(str, Enum):
+    login = "login"
+    logout = "logout"
+    create = "create"
+    update = "update"
+    delete = "delete"
+    view = "view"
+
+
+class UserLog(BaseModel):
+    id: str
+    user_id: str
+    operation_type: LogOperationType
+    description: str
+    created_at: datetime
+    ip_address: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class CreateLogModel(BaseModel):
+    user_id: str
+    operation_type: LogOperationType
+    description: str
+    ip_address: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class LogFilterModel(BaseModel):
+    user_id: Optional[str] = None
+    operation_type: Optional[LogOperationType] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+class UserLogResponse(BaseModel):
+    id: str
+    user_id: str
+    operation_type: LogOperationType
+    description: str
+    created_at: datetime
+    ip_address: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
