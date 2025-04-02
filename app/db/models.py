@@ -44,3 +44,45 @@ class UserResponse(BaseModel):
     phone: str
     created_at: datetime
     updated_at: datetime
+
+
+class Membership(BaseModel):
+    id: str
+    user_id: str
+    level: str
+    points: int
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreateMembershipModel(BaseModel):
+    user_id: str
+    level: str
+    points: int
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool = True
+
+
+class UpdateMembershipModel(BaseModel):
+    user_id: Optional[str] = None
+    level: Optional[str] = None
+    points: Optional[int] = None
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+
+class MembershipResponse(BaseModel):
+    id: str
+    user_id: str
+    level: str
+    points: int
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime

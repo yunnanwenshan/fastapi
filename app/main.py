@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException, status, Query, Path, Depends
+from fastapi import FastAPI, HTTPException, status, Query, Path, Depends, Body
 from starlette.responses import Response
 from typing import List, Optional, Dict, Any
 
-from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse
+from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse
 from app.api import api
 
 app = FastAPI()
@@ -105,6 +105,76 @@ def delete_user(user_id: str = Path(..., description="The ID of the user to dele
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
 
+# Membership endpoints
+@app.get("/memberships", response_model=List[MembershipResponse])
+def read_memberships(
+    skip: int = Query(0, description="Number of records to skip"),
+    limit: int = Query(100, description="Maximum records to return"),
+    user_id: Optional[str] = Query(None, description="Filter by user ID"),
+    level: Optional[str] = Query(None, description="Filter by membership level")
+):
+    try:
+        return api.get_all_memberships(skip=skip, limit=limit, user_id=user_id, level=level)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving memberships: {str(e)}")
+
+@app.get("/memberships/{membership_id}", response_model=MembershipResponse)
+def read_membership(membership_id: str = Path(..., description="Membership ID")):
+    try:
+        return api.get_membership(membership_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving membership: {str(e)}")
+
+@app.post("/memberships", response_model=MembershipResponse, status_code=status.HTTP_201_CREATED)
+def create_membership(membership_data: CreateMembershipModel):
+    try:
+        return api.create_membership(membership_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create membership: {str(e)}")
+
+@app.put("/memberships/{membership_id}", response_model=MembershipResponse)
+def update_membership(
+    membership_data: UpdateMembershipModel,
+    membership_id: str = Path(..., description="Membership ID to update")
+):
+    try:
+        return api.update_membership(membership_id, membership_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update membership: {str(e)}")
+
+@app.delete("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
+def delete_membership(membership_id: str = Path(..., description="Membership ID to delete")):
+    try:
+        return api.delete_membership(membership_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete membership: {str(e)}")
+
+@app.get("/users/{user_id}/memberships", response_model=List[MembershipResponse])
+def read_user_memberships(user_id: str = Path(..., description="User ID to get memberships for")):
+    try:
+        return api.get_user_memberships(user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving user memberships: {str(e)}")
+
+@app.post("/memberships/{membership_id}/points", response_model=MembershipResponse)
+def add_membership_points(
+    membership_id: str = Path(..., description="Membership ID to add points to"),
+    points: int = Body(..., embed=True, description="Points to add")
+):
+    try:
+        return api.add_membership_points(membership_id, points)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add points: {str(e)}")
 
 @app.get("/users/{user_id}/details")
 def get_user_details(user_id: int):

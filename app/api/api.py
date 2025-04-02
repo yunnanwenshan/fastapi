@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from passlib.hash import bcrypt
 from fastapi import HTTPException
 
-from app.db.models import User, CreateUserModel, UpdateUserModel, UserResponse
+from app.db.models import User, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse
 
 
 def hash_password(password: str) -> str:
@@ -396,3 +396,175 @@ def get_user_details(user_id: int):
         "user": user_info,
         "matched_cars": user_cars
     }
+
+# Membership-related functions
+def create_membership(membership_data: CreateMembershipModel) -> MembershipResponse:
+    """Create a new membership for a user"""
+    # Validate user exists
+    with open('data/users.json') as stream:
+        users = json.load(stream)
+    user_exists = any(str(u.get('id')) == membership_data.user_id for u in users)
+    if not user_exists:
+        raise HTTPException(status_code=400, detail="User does not exist")
+
+    # Generate membership data
+    now = datetime.now()
+    membership_id = str(uuid.uuid4())
+    new_membership = {
+        "id": membership_id,
+        "user_id": membership_data.user_id,
+        "level": membership_data.level,
+        "points": membership_data.points,
+        "valid_from": membership_data.valid_from.isoformat(),
+        "valid_until": membership_data.valid_until.isoformat(),
+        "is_active": membership_data.is_active,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+
+    # Save to memberships.json
+    with open('data/memberships.json') as stream:
+        memberships = json.load(stream)
+    memberships.append(new_membership)
+    with open('data/memberships.json', 'w') as stream:
+        json.dump(memberships, stream, indent=2)
+
+    return MembershipResponse(**new_membership)
+
+def update_membership(membership_id: str, membership_data: UpdateMembershipModel) -> MembershipResponse:
+    """Update an existing membership"""
+    with open('data/memberships.json') as stream:
+        memberships = json.load(stream)
+
+    updated = False
+    for i, m in enumerate(memberships):
+        if m['id'] == membership_id:
+            # Update provided fields
+            if membership_data.user_id is not None:
+                memberships[i]['user_id'] = membership_data.user_id
+            if membership_data.level is not None:
+                memberships[i]['level'] = membership_data.level
+            if membership_data.points is not None:
+                memberships[i]['points'] = membership_data.points
+            if membership_data.valid_from is not None:
+                memberships[i]['valid_from'] = membership_data.valid_from.isoformat()
+            if membership_data.valid_until is not None:
+                memberships[i]['valid_until'] = membership_data.valid_until.isoformat()
+            if membership_data.is_active is not None:
+                memberships[i]['is_active'] = membership_data.is_active
+            
+            memberships[i]['updated_at'] = datetime.now().isoformat()
+            updated = True
+            break
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Membership not found")
+
+    with open('data/memberships.json', 'w') as stream:
+        json.dump(memberships, stream, indent=2)
+
+    return MembershipResponse(**memberships[i])
+
+def delete_membership(membership_id: str) -> Dict[str, str]:
+    """Delete a membership by ID"""
+    with open('data/memberships.json') as stream:
+        memberships = json.load(stream)
+    
+    original_count = len(memberships)
+    memberships = [m for m in memberships if m['id'] != membership_id]
+    
+    if len(memberships) == original_count:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    
+    with open('data/memberships.json', 'w') as stream:
+        json.dump(memberships, stream, indent=2)
+    
+    return {"message": "Membership deleted successfully"}
+
+def get_membership(membership_id: str) -> Dict[str, Any]:
+    """Get a single membership by ID"""
+    with open('data/memberships.json') as stream:
+        memberships = json.load(stream)
+    
+    for m in memberships:
+        if m['id'] == membership_id:
+            # Convert date strings to datetime objects
+            m_copy = m.copy()
+            m_copy['valid_from'] = datetime.fromisoformat(m['valid_from'])
+            m_copy['valid_until'] = datetime.fromisoformat(m['valid_until'])
+            m_copy['created_at'] = datetime.fromisoformat(m['created_at'])
+            m_copy['updated_at'] = datetime.fromisoformat(m['updated_at'])
+            return m_copy
+    
+    raise HTTPException(status_code=404, detail="Membership not found")
+
+def get_all_memberships(
+    skip: int = 0,
+    limit: int = 100,
+    user_id: Optional[str] = None,
+    level: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Get all memberships with filtering and pagination"""
+    with open('data/memberships.json') as stream:
+        memberships = json.load(stream)
+    
+    # Apply filters
+    filtered = memberships
+    if user_id:
+        filtered = [m for m in filtered if m['user_id'] == user_id]
+    if level:
+        filtered = [m for m in filtered if m['level'].lower() == level.lower()]
+    
+    # Apply pagination
+    paginated = filtered[skip : skip + limit]
+    
+    # Convert date fields
+    result = []
+    for m in paginated:
+        m_copy = m.copy()
+        m_copy['valid_from'] = datetime.fromisoformat(m['valid_from'])
+        m_copy['valid_until'] = datetime.fromisoformat(m['valid_until'])
+        m_copy['created_at'] = datetime.fromisoformat(m['created_at'])
+        m_copy['updated_at'] = datetime.fromisoformat(m['updated_at'])
+        result.append(m_copy)
+    
+    return result
+
+def get_user_memberships(user_id: str) -> List[Dict[str, Any]]:
+    """Get all memberships for a specific user"""
+    return get_all_memberships(user_id=user_id)
+
+def add_membership_points(membership_id: str, points: int) -> MembershipResponse:
+    """Add points to a membership and update level"""
+    with open('data/memberships.json') as stream:
+        memberships = json.load(stream)
+    
+    updated = False
+    for i, m in enumerate(memberships):
+        if m['id'] == membership_id:
+            # Update points
+            memberships[i]['points'] += points
+            
+            # Update level based on points
+            new_points = memberships[i]['points']
+            if new_points >= 1000:
+                level = "platinum"
+            elif new_points >= 500:
+                level = "gold"
+            elif new_points >= 200:
+                level = "silver"
+            else:
+                level = "bronze"
+            memberships[i]['level'] = level
+            
+            memberships[i]['updated_at'] = datetime.now().isoformat()
+            updated = True
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    
+    with open('data/memberships.json', 'w') as stream:
+        json.dump(memberships, stream, indent=2)
+    
+    return MembershipResponse(**memberships[i])
