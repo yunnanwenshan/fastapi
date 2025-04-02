@@ -147,11 +147,6 @@ def get_user_details(user_id: int):
         "matched_cars": user_cars
     }
 
-
-def read_cars():
-    """
-    Get all available cars from the system.
-    
     Returns:
         A list of all cars with their details including id, name, fuel type,
         price category, vehicle category, and link.
