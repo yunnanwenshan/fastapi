@@ -138,8 +138,6 @@ def get_user_details(user_id: int):
                 user_cars.append(car)
     
     try:
-        with open('data/cars.json') as stream:
-            cars = json.load(stream)
         return cars
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Cars data not found")
