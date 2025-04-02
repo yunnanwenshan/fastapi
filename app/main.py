@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException, status, Query, Path, Depends, Body
 from starlette.responses import Response
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 
-from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType, UserRegistration, RegistrationResponse
+from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType, UserRegistration, RegistrationResponse, MembershipStatistics, LevelDistribution, MembershipTrend, PointsDistribution, MembershipTimeFrame, MembershipStatsResponse
 from app.api import api
 
 app = FastAPI()
@@ -210,6 +211,104 @@ def add_membership_points(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add points: {str(e)}")
+
+# Membership statistics endpoints
+@app.get("/membership-statistics", response_model=MembershipStatsResponse)
+def get_membership_stats(
+    start_date: Optional[str] = Query(None, description="Start date filter (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (YYYY-MM-DD)"),
+    level: Optional[str] = Query(None, description="Filter by membership level"),
+    include_trends: bool = Query(True, description="Include trend analysis"),
+    include_points_distribution: bool = Query(True, description="Include points distribution")
+):
+    try:
+        time_frame = MembershipTimeFrame(
+            start_date=datetime.fromisoformat(start_date) if start_date else None,
+            end_date=datetime.fromisoformat(end_date) if end_date else None,
+            level=level
+        )
+        return api.get_membership_statistics(
+            time_frame=time_frame,
+            calculate_trends=include_trends,
+            calculate_points_distribution=include_points_distribution
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving statistics: {str(e)}")
+
+@app.get("/membership-statistics/growth", response_model=float)
+def get_growth_rate(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)")
+):
+    try:
+        return api.get_membership_growth_rate(
+            datetime.fromisoformat(start_date),
+            datetime.fromisoformat(end_date)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating growth: {str(e)}")
+
+@app.get("/membership-statistics/retention", response_model=float)
+def get_retention_rate(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)")
+):
+    try:
+        return api.get_member_retention_rate(
+            datetime.fromisoformat(start_date),
+            datetime.fromisoformat(end_date)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating retention: {str(e)}")
+
+@app.get("/membership-statistics/levels", response_model=List[LevelDistribution])
+def get_level_distribution(
+    level: Optional[str] = Query(None, description="Filter by specific level"),
+    start_date: Optional[str] = Query(None, description="Start date filter (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (YYYY-MM-DD)")
+):
+    try:
+        time_frame = MembershipTimeFrame(
+            start_date=datetime.fromisoformat(start_date) if start_date else None,
+            end_date=datetime.fromisoformat(end_date) if end_date else None,
+            level=level
+        )
+        stats = api.get_membership_statistics(
+            time_frame=time_frame,
+            calculate_trends=False,
+            calculate_points_distribution=False
+        )
+        return stats.level_distribution
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving level data: {str(e)}")
+
+@app.get("/membership-statistics/trends", response_model=List[MembershipTrend])
+def get_trend_analysis(
+    start_date: Optional[str] = Query(None, description="Start date filter (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (YYYY-MM-DD)")
+):
+    try:
+        time_frame = MembershipTimeFrame(
+            start_date=datetime.fromisoformat(start_date) if start_date else None,
+            end_date=datetime.fromisoformat(end_date) if end_date else None
+        )
+        stats = api.get_membership_statistics(
+            time_frame=time_frame,
+            calculate_points_distribution=False
+        )
+        return stats.trends
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving trends: {str(e)}")
 
 # Log endpoints
 @app.get("/logs", response_model=List[Dict[str, Any]])

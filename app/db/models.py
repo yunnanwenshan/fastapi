@@ -154,3 +154,48 @@ class RegistrationResponse(BaseModel):
     message: str
     user_id: Optional[str] = None
     verification_required: bool = True
+
+
+class MembershipStatistics(BaseModel):
+    total_members: int
+    active_members: int
+    inactive_members: int
+    average_points: float
+    top_level: str
+    newest_members_count: int
+    expiring_soon_count: int
+    created_at: datetime
+
+
+class LevelDistribution(BaseModel):
+    level: str
+    count: int
+    percentage: float
+
+
+class MembershipTrend(BaseModel):
+    date: datetime
+    new_members: int
+    churned_members: int
+    net_growth: int
+    total_members: int
+
+
+class PointsDistribution(BaseModel):
+    range_start: int
+    range_end: int
+    count: int
+    percentage: float
+
+
+class MembershipTimeFrame(BaseModel):
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    level: Optional[str] = None
+
+
+class MembershipStatsResponse(BaseModel):
+    overall: MembershipStatistics
+    level_distribution: List[LevelDistribution]
+    trends: List[MembershipTrend]
+    points_distribution: List[PointsDistribution]

@@ -1,8 +1,9 @@
 import json
 import os.path
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
+from collections import defaultdict
 
 from passlib.hash import bcrypt
 from fastapi import HTTPException
@@ -10,7 +11,8 @@ from fastapi import HTTPException
 from app.db.models import (
     User, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel,
     UpdateMembershipModel, MembershipResponse, UserLog, CreateLogModel, UserLogResponse, LogOperationType,
-    UserRegistration, EmailVerification
+    UserRegistration, EmailVerification, MembershipStatistics, LevelDistribution, MembershipTrend,
+    PointsDistribution, MembershipTimeFrame, MembershipStatsResponse
 )
 
 import random
@@ -18,7 +20,6 @@ import string
 import re
 import smtplib
 from email.mime.text import MIMEText
-from datetime import timedelta
 
 
 def hash_password(password: str) -> str:
@@ -795,3 +796,138 @@ def _log_user_action(
         ))
     except Exception as e:
         pass
+
+def get_membership_statistics(
+    time_frame: MembershipTimeFrame = None,
+    calculate_trends: bool = True,
+    calculate_points_distribution: bool = True
+) -> MembershipStatsResponse:
+    with open('data/memberships.json') as f:
+        memberships = [Membership(**m) for m in json.load(f)]
+
+    now = datetime.now()
+    filtered = memberships
+    
+    if time_frame:
+        if time_frame.start_date:
+            filtered = [m for m in filtered if m.created_at >= time_frame.start_date]
+        if time_frame.end_date:
+            filtered = [m for m in filtered if m.created_at <= time_frame.end_date]
+        if time_frame.level:
+            filtered = [m for m in filtered if m.level == time_frame.level]
+
+    total = len(filtered)
+    active = sum(1 for m in filtered if m.is_active and m.valid_until > now)
+    inactive = total - active
+    avg_points = sum(m.points for m in filtered)/total if total > 0 else 0
+    levels = [m.level for m in filtered]
+    top_level = max(set(levels), key=levels.count) if levels else "none"
+    
+    newest_count = sum(1 for m in filtered if (now - m.created_at).days < 30)
+    expiring_soon = sum(1 for m in filtered if (m.valid_until - now).days < 30)
+
+    stats = MembershipStatistics(
+        total_members=total,
+        active_members=active,
+        inactive_members=inactive,
+        average_points=round(avg_points, 2),
+        top_level=top_level,
+        newest_members_count=newest_count,
+        expiring_soon_count=expiring_soon,
+        created_at=datetime.now()
+    )
+
+    level_dist = calculate_level_distribution(filtered)
+    trends = calculate_membership_trends(filtered) if calculate_trends else []
+    points_dist = calculate_points_distribution(filtered) if calculate_points_distribution else []
+
+    return MembershipStatsResponse(
+        overall=stats,
+        level_distribution=level_dist,
+        trends=trends,
+        points_distribution=points_dist
+    )
+
+def calculate_level_distribution(memberships: List[Membership]) -> List[LevelDistribution]:
+    level_counts = defaultdict(int)
+    total = len(memberships)
+    
+    for m in memberships:
+        level_counts[m.level] += 1
+
+    return [
+        LevelDistribution(
+            level=level,
+            count=count,
+            percentage=round(count/total*100, 2) if total > 0 else 0
+        )
+        for level, count in level_counts.items()
+    ]
+
+def calculate_membership_trends(memberships: List[Membership]) -> List[MembershipTrend]:
+    trends = defaultdict(lambda: {'new': 0, 'churned': 0, 'total': 0})
+    current_date = datetime.now()
+    
+    for m in memberships:
+        month_key = m.created_at.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        trends[month_key]['new'] += 1
+
+    for m in memberships:
+        if m.valid_until < current_date:
+            churn_month = m.valid_until.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            trends[churn_month]['churned'] += 1
+
+    sorted_months = sorted(trends.keys())
+    running_total = 0
+    trends_list = []
+    
+    for month in sorted_months:
+        running_total += trends[month]['new'] - trends[month]['churned']
+        trends_list.append(MembershipTrend(
+            date=month,
+            new_members=trends[month]['new'],
+            churned_members=trends[month]['churned'],
+            net_growth=trends[month]['new'] - trends[month]['churned'],
+            total_members=running_total
+        ))
+    
+    return trends_list
+
+def calculate_points_distribution(memberships: List[Membership]) -> List[PointsDistribution]:
+    ranges = [
+        (0, 100), (101, 500), 
+        (501, 1000), (1001, 5000), 
+        (5001, float('inf'))
+    ]
+    dist = []
+    total = len(memberships)
+    
+    for r_start, r_end in ranges:
+        count = sum(1 for m in memberships if r_start <= m.points <= r_end)
+        percentage = round(count/total*100, 2) if total > 0 else 0
+        dist.append(PointsDistribution(
+            range_start=r_start,
+            range_end=r_end if r_end != float('inf') else 10000,
+            count=count,
+            percentage=percentage
+        ))
+    
+    return dist
+
+def get_membership_growth_rate(start_date: datetime, end_date: datetime) -> float:
+    with open('data/memberships.json') as f:
+        memberships = json.load(f)
+    
+    initial = sum(1 for m in memberships if datetime.fromisoformat(m['created_at']) < start_date)
+    final = sum(1 for m in memberships if datetime.fromisoformat(m['created_at']) <= end_date)
+    
+    return round((final - initial)/initial*100, 2) if initial > 0 else 0
+
+def get_member_retention_rate(start_date: datetime, end_date: datetime) -> float:
+    with open('data/memberships.json') as f:
+        memberships = [Membership(**m) for m in json.load(f)]
+    
+    cohort = [m for m in memberships if start_date <= m.created_at <= end_date]
+    retained = sum(1 for m in cohort if m.valid_until > end_date and m.is_active)
+    
+    return round(retained/len(cohort)*100, 2) if cohort else 0
