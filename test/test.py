@@ -299,7 +299,3 @@ def test_create_answer():
 def test_read_result():
     response = client.get('/result/1')
     assert response.status_code == 200
-
-def test_read_result1():
-    response = client.get('/result/1')
-    assert response.status_code == 200
