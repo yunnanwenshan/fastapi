@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+import re
 
 
 class Answer(BaseModel):
@@ -131,3 +132,25 @@ class UserLogResponse(BaseModel):
     created_at: datetime
     ip_address: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+class EmailVerification(BaseModel):
+    email: str
+    code: str
+    created_at: datetime
+    expires_at: datetime
+    verified: bool = False
+
+
+class UserRegistration(BaseModel):
+    name: str
+    mail: str
+    phone: str
+    password: str
+    confirm_password: str
+
+
+class RegistrationResponse(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+    verification_required: bool = True

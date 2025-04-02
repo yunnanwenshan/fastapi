@@ -9,8 +9,16 @@ from fastapi import HTTPException
 
 from app.db.models import (
     User, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel,
-    UpdateMembershipModel, MembershipResponse, UserLog, CreateLogModel, UserLogResponse, LogOperationType
+    UpdateMembershipModel, MembershipResponse, UserLog, CreateLogModel, UserLogResponse, LogOperationType,
+    UserRegistration, EmailVerification
 )
+
+import random
+import string
+import re
+import smtplib
+from email.mime.text import MIMEText
+from datetime import timedelta
 
 
 def hash_password(password: str) -> str:
@@ -38,6 +46,78 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         True if password matches, False otherwise
     """
     return bcrypt.verify(plain_password, hashed_password)
+
+
+def generate_verification_code() -> str:
+    return ''.join(random.choices(string.digits, k=6))
+
+def is_valid_email(email: str) -> bool:
+    pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return re.match(pattern, email) is not None
+
+def is_strong_password(password: str) -> bool:
+    if len(password) < 8:
+        return False
+    if not re.search(r'[A-Z]', password):
+        return False
+    if not re.search(r'[a-z]', password):
+        return False
+    if not re.search(r'\d', password):
+        return False
+    if not re.search(r'[!@#$%^&*()_+{}\[\]:;<>,.?/~`-]', password):
+        return False
+    return True
+
+def send_verification_email(email: str, code: str) -> bool:
+    msg = MIMEText(f'Your verification code is: {code}')
+    msg['Subject'] = 'Email Verification Code'
+    msg['From'] = 'noreply@example.com'
+    msg['To'] = email
+    
+    try:
+        with smtplib.SMTP('localhost', 1025) as server:
+            server.sendmail('noreply@example.com', [email], msg.as_string())
+        return True
+    except Exception:
+        return False
+
+def create_verification(email: str) -> str:
+    with open('data/email_verifications.json') as f:
+        verifications = json.load(f)
+    
+    code = generate_verification_code()
+    now = datetime.now()
+    expires_at = now + timedelta(hours=24)
+    
+    new_verification = {
+        "email": email,
+        "code": code,
+        "created_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "verified": False
+    }
+    
+    verifications.append(new_verification)
+    with open('data/email_verifications.json', 'w') as f:
+        json.dump(verifications, f, indent=2)
+    
+    return code
+
+def verify_email(email: str, code: str) -> bool:
+    with open('data/email_verifications.json') as f:
+        verifications = json.load(f)
+    
+    for entry in verifications:
+        if (entry['email'] == email and 
+            entry['code'] == code and 
+            not entry['verified'] and 
+            datetime.now() < datetime.fromisoformat(entry['expires_at'])):
+            
+            entry['verified'] = True
+            with open('data/email_verifications.json', 'w') as f:
+                json.dump(verifications, f, indent=2)
+            return True
+    return False
 
 
 def create_user(user_data: CreateUserModel) -> UserResponse:
@@ -287,6 +367,56 @@ def get_all_users(skip: int = 0, limit: int = 100, name: Optional[str] = None, m
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving users: {str(e)}")
+
+
+def register_user(user_data: UserRegistration) -> Dict[str, Any]:
+    if not is_valid_email(user_data.mail):
+        raise HTTPException(400, "Invalid email format")
+    
+    with open('data/users.json') as f:
+        if any(u['mail'] == user_data.mail for u in json.load(f)):
+            raise HTTPException(400, "Email already registered")
+    
+    if not is_strong_password(user_data.password):
+        raise HTTPException(400, "Password does not meet security requirements")
+    
+    if user_data.password != user_data.confirm_password:
+        raise HTTPException(400, "Passwords do not match")
+    
+    code = create_verification(user_data.mail)
+    if not send_verification_email(user_data.mail, code):
+        raise HTTPException(500, "Failed to send verification email")
+    
+    return {
+        "message": "Verification code sent to email",
+        "verification_required": True
+    }
+
+def finalize_registration(email: str, code: str) -> UserResponse:
+    if not verify_email(email, code):
+        raise HTTPException(400, "Invalid verification code")
+    
+    with open('data/email_verifications.json') as f:
+        verification = next(
+            (v for v in json.load(f) 
+             if v['email'] == email and v['code'] == code and v['verified']),
+            None
+        )
+    
+    if not verification:
+        raise HTTPException(400, "Verification not found")
+    
+    with open('data/users.json') as f:
+        users = json.load(f)
+        user_data = next(
+            (u for u in users if u['mail'] == email),
+            None
+        )
+    
+    if user_data:
+        return UserResponse(**user_data)
+    
+    raise HTTPException(400, "User registration not completed")
 
 
 def hello_world():

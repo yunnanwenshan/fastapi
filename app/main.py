@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status, Query, Path, Depends, Body
 from starlette.responses import Response
 from typing import List, Optional, Dict, Any
 
-from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType
+from app.db.models import UserAnswer, CreateUserModel, UpdateUserModel, UserResponse, Membership, CreateMembershipModel, UpdateMembershipModel, MembershipResponse, UserLogResponse, CreateLogModel, LogOperationType, UserRegistration, RegistrationResponse
 from app.api import api
 
 app = FastAPI()
@@ -104,6 +104,41 @@ def delete_user(user_id: str = Path(..., description="The ID of the user to dele
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+
+@app.post("/register", response_model=RegistrationResponse, status_code=status.HTTP_201_CREATED)
+def register_user(user_data: UserRegistration):
+    """
+    Register a new user with email verification
+    
+    Returns:
+        Registration status with verification requirement
+    """
+    try:
+        return api.register_user(user_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+
+@app.post("/verify-email", response_model=UserResponse)
+def verify_email_endpoint(
+    email: str = Body(..., description="Email address to verify"),
+    code: str = Body(..., description="Verification code received via email")
+):
+    """
+    Verify email address using received code
+    
+    Returns:
+        Complete user registration data if verification succeeds
+    """
+    try:
+        if not api.verify_email(email, code):
+            raise HTTPException(status_code=400, detail="Invalid verification code or expired")
+        return api.finalize_registration(email, code)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification process failed: {str(e)}")
 
 # Membership endpoints
 @app.get("/memberships", response_model=List[MembershipResponse])
