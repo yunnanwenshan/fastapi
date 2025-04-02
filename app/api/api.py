@@ -147,10 +147,6 @@ def get_user_details(user_id: int):
         "matched_cars": user_cars
     }
 
-    Returns:
-        A list of all cars with their details including id, name, fuel type,
-        price category, vehicle category, and link.
-        
     Raises:
         HTTPException: 404 error if cars file is not found or 500 error if there's a JSON parsing issue.
     """
