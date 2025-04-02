@@ -134,10 +134,6 @@ def get_user_details(user_id: int):
     
     # Get detailed car information
     if car_ids:
-        with open('data/cars.json') as stream:
-            cars = json.load(stream)
-        
-        for car in cars:
             if car['id'] in car_ids:
                 user_cars.append(car)
     
