@@ -18,9 +18,6 @@ pytest app/test.py
 ### Run server
 ### Run test
 
-
-
-```
 docker-compose exec app pytest test/test.py
 
 
