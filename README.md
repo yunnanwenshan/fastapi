@@ -13,9 +13,6 @@ Make sure to replace `<your_database_url>` and `<your_redis_url>` with the actua
 ```
 pytest app/test.py
 ```
-## Run with docker
-
-### Run server
 ### Run test
 
 docker-compose exec app pytest test/test.py
