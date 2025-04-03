@@ -13,10 +13,6 @@ git clone https://github.com/marciovrl/fastapi-example.git
 
 ## Run local
 
-### Install dependencies
-
-```
-
 ### Environment Configuration
 
 Create a `.env` file in the root of your project and include the following configurations:
