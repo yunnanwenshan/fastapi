@@ -9,8 +9,3 @@ A simple example of using Fast API in Python.
 pytest app/test.py
 ```
 ### Run test
-### Access PostgreSQL Server
-
-```
-docker-compose exec db psql --username=fastapi --dbname=fastapi_dev
-```
