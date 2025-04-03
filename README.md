@@ -17,8 +17,6 @@ git clone https://github.com/marciovrl/fastapi-example.git
 
 ```
 
-pip install -r requirements.txt
-```
 ### Environment Configuration
 
 Create a `.env` file in the root of your project and include the following configurations:
