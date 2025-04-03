@@ -6,9 +6,6 @@ A simple example of using Fast API in Python.
 - Python 3
 
 ## Clone the project
-
-```
-git clone https://github.com/marciovrl/fastapi-example.git
 ```
 
 ## Run local
@@ -17,10 +14,6 @@ git clone https://github.com/marciovrl/fastapi-example.git
 
 Create a `.env` file in the root of your project and include the following configurations:
 
-```
-DATABASE_URL=<your_database_url>
-REDIS_URL=<your_redis_url>
-```
 
 Make sure to replace `<your_database_url>` and `<your_redis_url>` with the actual URLs for your database and Redis service.
 
