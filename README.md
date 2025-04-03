@@ -8,10 +8,6 @@ A simple example of using Fast API in Python.
 ## Clone the project
 ```
 
-## Run local
-
-### Environment Configuration
-
 Create a `.env` file in the root of your project and include the following configurations:
 
 
@@ -19,8 +15,6 @@ Make sure to replace `<your_database_url>` and `<your_redis_url>` with the actua
 
 ### Run server
 
-```
-uvicorn app.main:app --reload
 ```
 
 ### Run test
