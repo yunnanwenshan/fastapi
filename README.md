@@ -50,8 +50,7 @@ pytest app/test.py
 
 ```
 docker-compose exec app pytest test/test.py
-```
-## API documentation (provided by Swagger UI)
+
 
 ```
 ```
