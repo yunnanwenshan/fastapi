@@ -6,10 +6,6 @@ A simple example of using Fast API in Python.
 - Python 3
 
 ## Clone the project
-```
-
-Create a `.env` file in the root of your project and include the following configurations:
-
 
 Make sure to replace `<your_database_url>` and `<your_redis_url>` with the actual URLs for your database and Redis service.
 
