@@ -19,9 +19,6 @@ pytest app/test.py
 ### Run test
 
 docker-compose exec app pytest test/test.py
-
-
-```
 ```
 
 ### Access PostgreSQL Server
