@@ -41,7 +41,6 @@ uvicorn app.main:app --reload
 ```
 pytest app/test.py
 ```
-
 ## Run with docker
 
 ### Run server
