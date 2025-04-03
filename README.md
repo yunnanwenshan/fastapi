@@ -4,8 +4,3 @@ A simple example of using Fast API in Python.
 
 ## Preconditions:
 - Python 3
-
-## Clone the project
-pytest app/test.py
-```
-### Run test
