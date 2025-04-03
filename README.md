@@ -45,11 +45,6 @@ pytest app/test.py
 ## Run with docker
 
 ### Run server
-
-```
-docker-compose up -d --build
-```
-
 ### Run test
 
 ```
