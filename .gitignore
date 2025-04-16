@@ -1,7 +1,7 @@
-
 # Python development environment
 .env
 venv/
+ENV/
 __pycache__/
 *.pyc
 *.pyo
@@ -9,6 +9,7 @@ __pycache__/
 # IDE and editor files
 .idea/
 .vscode/
+*.swp
 
 # Clacky configuration
 .1024*
