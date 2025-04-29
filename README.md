@@ -6,7 +6,6 @@ A simple example of using Fast API in Python.
 - Python 3
 
 ## Clone the project
-
 ```
 git clone https://github.com/marciovrl/fastapi-example.git
 ```
